@@ -10,20 +10,23 @@ import time
 
 app = FastAPI(title="AgriVision Hub", version="1.0.0")
 
-# Enable CORS for frontend
+# Configure CORS properly
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "https://agrivision-frontend.onrender.com",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "*"  # Allow all for testing
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Create upload directory
 UPLOAD_DIR = Path("/tmp/agrivision_uploads")
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
-# Store tasks
 tasks = {}
 
 def process_task(task_id: str, file_path: str):
