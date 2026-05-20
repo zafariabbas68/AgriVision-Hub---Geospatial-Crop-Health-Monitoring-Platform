@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AgriVision Hub - Crop Health Monitoring</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        .container {
+            display: grid;
+            grid-template-columns: 300px 1fr 300px;
+            gap: 20px;
+            padding: 20px;
+            height: calc(100vh - 120px);
+        }
+        .panel {
+            background: #f5f5f5;
+            border-radius: 8px;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        #map {
+            height: 100%;
+            border-radius: 8px;
+        }
+        .upload-area {
+            border: 2px dashed #ccc;
+            border-radius: 8px;
+            padding: 40px 20px;
+            text-align: center;
+            cursor: pointer;
+            margin: 20px 0;
+            transition: all 0.3s;
+        }
+        .upload-area:hover {
+            border-color: #667eea;
+            background: #e8e8e8;
+        }
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            width: 100%;
+            font-size: 16px;
+        }
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            margin-top: 10px;
+        }
+        .pending { background: #ffc107; color: #000; }
+        .processing { background: #2196f3; color: #fff; }
+        .completed { background: #4caf50; color: #fff; }
+        .failed { background: #f44336; color: #fff; }
+        .progress-bar {
+            background: #e0e0e0;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 15px 0;
+            height: 30px;
+        }
+        .progress-fill {
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 12px;
+            transition: width 0.3s;
+        }
+        .task-item {
+            background: white;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        .task-item:hover {
+            background: #e3f2fd;
+        }
+        h3 { margin-bottom: 15px; color: #333; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>🌾 AgriVision Hub</h1>
+        <p>Drone-based Crop Health Monitoring with NDVI</p>
+    </header>
+    
+    <div class="container">
+        <div class="panel">
+            <h3>📤 Upload Drone Image</h3>
+            <div class="upload-area" id="uploadArea">
+                <p>📁 Click or drag & drop</p>
+                <small>Supports: GeoTIFF, JPEG, PNG</small>
+            </div>
+            <input type="file" id="fileInput" accept=".tif,.tiff,.jpg,.jpeg,.png" style="display: none">
+            <button id="uploadBtn" disabled>Upload & Process</button>
+            
+            <div id="uploadStatus" style="margin-top: 20px;"></div>
+        </div>
+        
+        <div id="map"></div>
+        
+        <div class="panel">
+            <h3>📋 Tasks</h3>
+            <div id="tasksList">
+                <p style="color: #999;">No tasks yet</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://127.0.0.1:8000';
+        let selectedFile = null;
+        let map = null;
+        let currentLayer = null;
+        
+        // Initialize map
+        function initMap() {
+            map = L.map('map').setView([52.5200, 13.4050], 13);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+        }
+        
+        // Load tasks
+        async function loadTasks() {
+            try {
+                const response = await fetch(`${API_URL}/api/v1/tasks`);
+                const tasks = await response.json();
+                
+                const container = document.getElementById('tasksList');
+                if (tasks.length === 0) {
+                    container.innerHTML = '<p style="color: #999;">No tasks yet</p>';
+                    return;
+                }
+                
+                container.innerHTML = tasks.map(task => `
+                    <div class="task-item" onclick="loadTaskResult('${task.task_id}')">
+                        <strong>${task.filename}</strong><br>
+                        Status: <span class="status-badge ${task.status}">${task.status}</span><br>
+                        Progress: ${task.progress}%
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error('Error loading tasks:', error);
+            }
+        }
+        
+        // Load task result on map
+        async function loadTaskResult(taskId) {
+            try {
+                const response = await fetch(`${API_URL}/api/v1/task/${taskId}`);
+                const task = await response.json();
+                
+                if (task.geojson && currentLayer) {
+                    map.removeLayer(currentLayer);
+                }
+                
+                if (task.geojson) {
+                    currentLayer = L.geoJSON(task.geojson, {
+                        style: {
+                            color: '#4caf50',
+                            weight: 2,
+                            fillColor: '#8bc34a',
+                            fillOpacity: 0.5
+                        },
+                        onEachFeature: (feature, layer) => {
+                            if (feature.properties) {
+                                layer.bindPopup(`
+                                    <b>NDVI Value:</b> ${feature.properties.ndvi_value}<br>
+                                    <b>Classification:</b> ${feature.properties.classification}
+                                `);
+                            }
+                        }
+                    }).addTo(map);
+                    map.fitBounds(currentLayer.getBounds());
+                }
+            } catch (error) {
+                console.error('Error loading task:', error);
+            }
+        }
+        
+        // Upload file
+        async function uploadFile() {
+            if (!selectedFile) return;
+            
+            const formData = new FormData();
+            formData.append('file', selectedFile);
+            
+            document.getElementById('uploadBtn').disabled = true;
+            document.getElementById('uploadBtn').textContent = 'Uploading...';
+            
+            try {
+                const response = await fetch(`${API_URL}/api/v1/upload`, {
+                    method: 'POST',
+                    body: formData
+                });
+                const result = await response.json();
+                
+                document.getElementById('uploadStatus').innerHTML = `
+                    <div style="background: #e8f5e9; padding: 10px; border-radius: 6px;">
+                        ✅ Task ID: ${result.task_id}<br>
+                        Status: ${result.status}
+                    </div>
+                `;
+                
+                // Poll for status
+                pollTaskStatus(result.task_id);
+                loadTasks();
+                
+            } catch (error) {
+                document.getElementById('uploadStatus').innerHTML = `
+                    <div style="background: #ffebee; padding: 10px; border-radius: 6px; color: #c62828;">
+                        ❌ Upload failed: ${error.message}
+                    </div>
+                `;
+            } finally {
+                document.getElementById('uploadBtn').disabled = false;
+                document.getElementById('uploadBtn').textContent = 'Upload & Process';
+            }
+        }
+        
+        // Poll task status
+        async function pollTaskStatus(taskId) {
+            const interval = setInterval(async () => {
+                try {
+                    const response = await fetch(`${API_URL}/api/v1/task/${taskId}`);
+                    const task = await response.json();
+                    
+                    if (task.status === 'completed') {
+                        clearInterval(interval);
+                        loadTasks();
+                        loadTaskResult(taskId);
+                    } else if (task.status === 'failed') {
+                        clearInterval(interval);
+                    }
+                } catch (error) {
+                    console.error('Polling error:', error);
+                }
+            }, 2000);
+        }
+        
+        // Event handlers
+        document.getElementById('uploadArea').addEventListener('click', () => {
+            document.getElementById('fileInput').click();
+        });
+        
+        document.getElementById('uploadArea').addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+        });
+        
+        document.getElementById('uploadArea').addEventListener('drop', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                selectedFile = files[0];
+                document.getElementById('uploadArea').innerHTML = `
+                    <p>✅ ${selectedFile.name}</p>
+                    <small>${(selectedFile.size / 1024 / 1024).toFixed(2)} MB</small>
+                `;
+                document.getElementById('uploadBtn').disabled = false;
+            }
+        });
+        
+        document.getElementById('fileInput').addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                selectedFile = e.target.files[0];
+                document.getElementById('uploadArea').innerHTML = `
+                    <p>✅ ${selectedFile.name}</p>
+                    <small>${(selectedFile.size / 1024 / 1024).toFixed(2)} MB</small>
+                `;
+                document.getElementById('uploadBtn').disabled = false;
+            }
+        });
+        
+        document.getElementById('uploadBtn').addEventListener('click', uploadFile);
+        
+        // Initialize
+        initMap();
+        loadTasks();
+        
+        // Refresh tasks every 5 seconds
+        setInterval(loadTasks, 5000);
+    </script>
+</body>
+</html>

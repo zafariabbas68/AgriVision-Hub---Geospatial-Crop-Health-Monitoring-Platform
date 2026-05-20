@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Satellite NDVI Analysis</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f0f2f5; }
+        .header { background: linear-gradient(135deg, #1e3c72, #2a5298); color: white; padding: 20px; border-radius: 10px; margin-bottom: 20px; }
+        .container { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .panel { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        #map { height: 400px; border-radius: 10px; }
+        button { background: #2a5298; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin: 5px; }
+        .result { margin-top: 20px; padding: 15px; background: #e8f5e9; border-radius: 5px; }
+        .badge { padding: 4px 8px; border-radius: 4px; font-size: 12px; }
+        .excellent { background: #27ae60; color: white; }
+        .good { background: #3498db; color: white; }
+        .moderate { background: #f39c12; color: white; }
+        .poor { background: #e74c3c; color: white; }
+        .loading { text-align: center; padding: 20px; color: #666; }
+        .error { background: #ffebee; color: #c62828; padding: 10px; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🛰️ Satellite NDVI Analysis</h1>
+        <p>No drone needed! Analyze any field using satellite imagery</p>
+    </div>
+    
+    <div class="container">
+        <div class="panel">
+            <h3>🗺️ Select Field Location</h3>
+            <div id="map"></div>
+            <p style="margin-top: 10px;">
+                📍 Click on map to select a point for instant NDVI analysis
+            </p>
+            <button onclick="analyzePoint()">📍 Analyze This Point</button>
+            <button onclick="clearMap()">🗑️ Clear Selection</button>
+        </div>
+        
+        <div class="panel">
+            <h3>📊 Analysis Results</h3>
+            <div id="results">
+                <div class="loading">Click on the map to analyze a location</div>
+            </div>
+            
+            <h3 style="margin-top: 20px;">📈 Recent Analyses</h3>
+            <div id="history"></div>
+        </div>
+    </div>
+    
+    <div class="container" style="margin-top: 20px;">
+        <div class="panel">
+            <h3>ℹ️ About Satellite NDVI</h3>
+            <p><strong>NDVI</strong> (Normalized Difference Vegetation Index) measures vegetation health:</p>
+            <ul>
+                <li><span class="badge excellent">NDVI > 0.6</span> - Excellent, very healthy vegetation</li>
+                <li><span class="badge good">NDVI 0.4-0.6</span> - Good, healthy vegetation</li>
+                <li><span class="badge moderate">NDVI 0.2-0.4</span> - Moderate, stressed vegetation</li>
+                <li><span class="badge poor">NDVI < 0.2</span> - Poor, sparse or unhealthy vegetation</li>
+            </ul>
+            <p><small>Data source: Simulated satellite data based on location characteristics</small></p>
+        </div>
+    </div>
+    
+    <script>
+        const API_URL = 'http://127.0.0.1:8000';
+        let map;
+        let currentMarker = null;
+        
+        // Initialize map
+        function initMap() {
+            map = L.map('map').setView([52.5200, 13.4050], 12);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+            
+            map.on('click', function(e) {
+                if (currentMarker) map.removeLayer(currentMarker);
+                currentMarker = L.marker(e.latlng).addTo(map);
+                currentMarker.bindPopup(`
+                    <b>Selected Location</b><br>
+                    Lat: ${e.latlng.lat.toFixed(4)}<br>
+                    Lon: ${e.latlng.lng.toFixed(4)}<br>
+                    <button onclick="window.analyzePoint()">Analyze</button>
+                `).openPopup();
+                
+                document.getElementById('results').innerHTML = `
+                    <div class="loading">
+                        📍 Location selected: ${e.latlng.lat.toFixed(4)}, ${e.latlng.lng.toFixed(4)}<br>
+                        Click "Analyze This Point" to get NDVI value
+                    </div>
+                `;
+            });
+        }
+        
+        async function analyzePoint() {
+            if (!currentMarker) {
+                alert('Please click on the map first to select a location');
+                return;
+            }
+            
+            const lat = currentMarker.getLatLng().lat;
+            const lng = currentMarker.getLatLng().lng;
+            
+            document.getElementById('results').innerHTML = '<div class="loading">🔄 Fetching satellite data...</div>';
+            
+            try {
+                // Use GET request
+                const response = await fetch(`${API_URL}/api/v2/satellite/point?lat=${lat}&lon=${lng}`);
+                const data = await response.json();
+                
+                if (data.success && data.data) {
+                    const ndvi = data.data.ndvi;
+                    let healthClass = 'moderate';
+                    let healthText = 'Moderate';
+                    
+                    if (ndvi > 0.6) {
+                        healthClass = 'excellent';
+                        healthText = 'Excellent';
+                    } else if (ndvi > 0.4) {
+                        healthClass = 'good';
+                        healthText = 'Good';
+                    } else if (ndvi < 0.2) {
+                        healthClass = 'poor';
+                        healthText = 'Poor';
+                    }
+                    
+                    const healthColor = {
+                        'excellent': '#27ae60',
+                        'good': '#3498db',
+                        'moderate': '#f39c12',
+                        'poor': '#e74c3c'
+                    }[healthClass];
+                    
+                    document.getElementById('results').innerHTML = `
+                        <div class="result">
+                            <h4>📍 Location Analysis Results</h4>
+                            <p><strong>Coordinates:</strong> ${lat.toFixed(4)}, ${lng.toFixed(4)}</p>
+                            <p><strong>NDVI Value:</strong> <span class="badge ${healthClass}" style="background: ${healthColor}">${ndvi}</span></p>
+                            <p><strong>Interpretation:</strong> ${data.data.interpretation}</p>
+                            <p><strong>Data Source:</strong> ${data.data.source}</p>
+                            <p><strong>Date:</strong> ${data.data.date}</p>
+                            <hr>
+                            <p><strong>What this means:</strong><br>
+                            NDVI values range from -1 to 1. Higher values indicate healthier vegetation.<br>
+                            ${ndvi > 0.6 ? '✅ Your crops appear very healthy!' : 
+                              ndvi > 0.4 ? '⚠️ Your crops are moderately healthy - monitor closely.' : 
+                              '🚨 Your crops show signs of stress - action recommended.'}</p>
+                        </div>
+                    `;
+                    
+                    // Add to history
+                    addToHistory(lat, lng, ndvi, healthText);
+                } else {
+                    document.getElementById('results').innerHTML = `
+                        <div class="error">
+                            ❌ Error: ${data.error || 'No data available for this location'}
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('results').innerHTML = `
+                    <div class="error">
+                        ❌ Connection error: ${error.message}<br>
+                        Make sure the backend is running on port 8000
+                    </div>
+                `;
+            }
+        }
+        
+        function clearMap() {
+            if (currentMarker) {
+                map.removeLayer(currentMarker);
+                currentMarker = null;
+            }
+            document.getElementById('results').innerHTML = '<div class="loading">Click on the map to analyze a location</div>';
+        }
+        
+        function addToHistory(lat, lng, ndvi, health) {
+            const historyDiv = document.getElementById('history');
+            const timestamp = new Date().toLocaleString();
+            const newEntry = `
+                <div style="border-bottom: 1px solid #eee; padding: 10px; margin: 5px 0;">
+                    📍 ${lat.toFixed(4)}, ${lng.toFixed(4)}<br>
+                    NDVI: <strong>${ndvi}</strong> (${health})<br>
+                    <small>${timestamp}</small>
+                </div>
+            `;
+            const existing = historyDiv.innerHTML;
+            historyDiv.innerHTML = newEntry + existing;
+            
+            // Keep only last 10 entries
+            const entries = historyDiv.children;
+            while (entries.length > 10) {
+                historyDiv.removeChild(entries[entries.length - 1]);
+            }
+        }
+        
+        // Initialize when page loads
+        initMap();
+    </script>
+</body>
+</html>

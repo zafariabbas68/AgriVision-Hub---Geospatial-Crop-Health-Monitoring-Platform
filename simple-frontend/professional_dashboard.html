@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AgriVision - Professional NDVI Dashboard</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; }
+        .header { background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); color: white; padding: 30px; text-align: center; }
+        .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; padding: 30px; max-width: 1200px; margin: 0 auto; }
+        .stat-card { background: white; padding: 20px; border-radius: 10px; text-align: center; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .stat-value { font-size: 36px; font-weight: bold; color: #2a5298; }
+        .container { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; padding: 30px; max-width: 1200px; margin: 0 auto; }
+        .panel { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .task-item { border-bottom: 1px solid #eee; padding: 15px; cursor: pointer; transition: all 0.3s; }
+        .task-item:hover { background: #f0f7ff; transform: translateX(5px); }
+        .health-excellent { color: #27ae60; font-weight: bold; }
+        .health-good { color: #3498db; font-weight: bold; }
+        .health-moderate { color: #f39c12; font-weight: bold; }
+        .health-poor { color: #e74c3c; font-weight: bold; }
+        .badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; }
+        .badge-completed { background: #27ae60; color: white; }
+        .refresh-btn { background: #2a5298; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin: 10px; }
+        canvas { max-height: 300px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🌾 AgriVision Professional Dashboard</h1>
+        <p>Real-time Crop Health Monitoring with NDVI</p>
+    </div>
+    
+    <div class="stats-grid" id="statsGrid">
+        <div class="stat-card"><div class="stat-value" id="totalFields">0</div><div>Total Fields</div></div>
+        <div class="stat-card"><div class="stat-value" id="avgNDVI">0.00</div><div>Average NDVI</div></div>
+        <div class="stat-card"><div class="stat-value" id="healthyFields">0%</div><div>Healthy Area</div></div>
+        <div class="stat-card"><div class="stat-value" id="alertFields">0</div><div>Alerts</div></div>
+    </div>
+    
+    <div class="container">
+        <div class="panel">
+            <h3>📊 NDVI Trends</h3>
+            <canvas id="ndviChart"></canvas>
+        </div>
+        <div class="panel">
+            <h3>⚠️ Health Alerts</h3>
+            <div id="alertsList">No alerts</div>
+        </div>
+    </div>
+    
+    <div class="container">
+        <div class="panel">
+            <h3>📋 Field Analysis</h3>
+            <div id="tasksList">Loading...</div>
+        </div>
+        <div class="panel">
+            <h3>🤖 AI Recommendations</h3>
+            <div id="recommendations"></div>
+            <button class="refresh-btn" onclick="refreshData()">🔄 Refresh Data</button>
+        </div>
+    </div>
+    
+    <script>
+        const API_URL = 'http://127.0.0.1:8000';
+        let chart;
+        
+        async function refreshData() {
+            try {
+                const response = await fetch(`${API_URL}/api/v1/tasks`);
+                const tasks = await response.json();
+                const completed = tasks.filter(t => t.status === 'completed' && t.ndvi_stats);
+                
+                // Update stats
+                document.getElementById('totalFields').innerText = completed.length;
+                if (completed.length > 0) {
+                    const avgNdv = completed.reduce((sum, t) => sum + (t.ndvi_stats?.mean_ndvi || 0), 0) / completed.length;
+                    document.getElementById('avgNDVI').innerText = avgNdv.toFixed(3);
+                    
+                    const avgHealth = completed.reduce((sum, t) => sum + (t.ndvi_stats?.healthy_percentage || 0), 0) / completed.length;
+                    document.getElementById('healthyFields').innerText = Math.round(avgHealth) + '%';
+                    
+                    const alerts = completed.filter(t => (t.ndvi_stats?.mean_ndvi || 1) < 0.4);
+                    document.getElementById('alertFields').innerText = alerts.length;
+                }
+                
+                // Update chart
+                const labels = completed.map(t => t.field_name.substring(0, 20));
+                const ndviValues = completed.map(t => t.ndvi_stats?.mean_ndvi || 0);
+                
+                if (chart) chart.destroy();
+                const ctx = document.getElementById('ndviChart').getContext('2d');
+                chart = new Chart(ctx, {
+                    type: 'bar',
+                    data: { labels: labels, datasets: [{ label: 'NDVI Value', data: ndviValues, backgroundColor: '#2a5298' }] },
+                    options: { responsive: true, scales: { y: { min: -0.5, max: 1 } } }
+                });
+                
+                // Show alerts
+                const alerts = completed.filter(t => (t.ndvi_stats?.mean_ndvi || 1) < 0.4);
+                const alertsDiv = document.getElementById('alertsList');
+                if (alerts.length > 0) {
+                    alertsDiv.innerHTML = alerts.map(task => `
+                        <div style="background: #fee; padding: 10px; margin: 10px 0; border-left: 4px solid #e74c3c;">
+                            <strong>⚠️ ${task.field_name}</strong><br>
+                            NDVI: ${task.ndvi_stats?.mean_ndvi.toFixed(3)}<br>
+                            Health: ${task.ndvi_stats?.healthy_percentage.toFixed(0)}%<br>
+                            <small>Action needed</small>
+                        </div>
+                    `).join('');
+                } else {
+                    alertsDiv.innerHTML = '<div style="background: #efe; padding: 10px; border-left: 4px solid #27ae60;">✅ All fields are healthy!</div>';
+                }
+                
+                // Show tasks
+                const tasksDiv = document.getElementById('tasksList');
+                if (completed.length === 0) {
+                    tasksDiv.innerHTML = '<p>No fields analyzed yet. Upload an image to start!</p>';
+                } else {
+                    tasksDiv.innerHTML = completed.slice().reverse().map(task => `
+                        <div class="task-item" onclick="alert('NDVI: ${task.ndvi_stats?.mean_ndvi.toFixed(3)}')">
+                            <strong>${task.field_name}</strong><br>
+                            NDVI: ${task.ndvi_stats?.mean_ndvi.toFixed(3)} 
+                            <span class="health-${task.ndvi_stats?.mean_ndvi > 0.6 ? 'excellent' : task.ndvi_stats?.mean_ndvi > 0.4 ? 'good' : task.ndvi_stats?.mean_ndvi > 0.2 ? 'moderate' : 'poor'}">
+                                ${task.ndvi_stats?.interpretation || 'Unknown'}
+                            </span><br>
+                            Health: ${task.ndvi_stats?.healthy_percentage.toFixed(0)}%<br>
+                            <small>${new Date(task.created_at).toLocaleString()}</small>
+                        </div>
+                    `).join('');
+                }
+                
+                // Generate recommendations
+                const avgNDVI = completed.length > 0 ? completed.reduce((sum, t) => sum + (t.ndvi_stats?.mean_ndvi || 0), 0) / completed.length : 0;
+                const recDiv = document.getElementById('recommendations');
+                if (avgNDVI > 0.6) {
+                    recDiv.innerHTML = '<p>✅ Excellent overall crop health. Continue current management practices.</p>';
+                } else if (avgNDVI > 0.4) {
+                    recDiv.innerHTML = '<p>⚠️ Moderate crop health. Consider targeted irrigation in areas with NDVI below 0.4.</p>';
+                } else {
+                    recDiv.innerHTML = '<p>🚨 Critical crop health detected. Immediate action required: Apply fertilizer and increase irrigation.</p>';
+                }
+                
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('tasksList').innerHTML = '<p style="color:red;">Error connecting to server. Make sure backend is running.</p>';
+            }
+        }
+        
+        refreshData();
+        setInterval(refreshData, 15000);
+    </script>
+</body>
+</html>

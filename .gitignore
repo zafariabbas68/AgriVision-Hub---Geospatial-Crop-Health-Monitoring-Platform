@@ -1,0 +1,53 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+.venv
+*.egg-info/
+dist/
+build/
+*.log
+
+# Uploads and temp files
+uploads/
+*.jpg
+*.png
+*.tif
+*.tiff
+/tmp/
+*.jpeg
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+**/.DS_Store
+
+# Environment
+.env
+.env.local
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Frontend
+node_modules/
+npm-debug.log*
+dist/
+.tmp/
+
+# Backend specific
+backend/uploads/
+backend/__pycache__/
+backend/app/__pycache__/
+backend/app/services/__pycache__/
