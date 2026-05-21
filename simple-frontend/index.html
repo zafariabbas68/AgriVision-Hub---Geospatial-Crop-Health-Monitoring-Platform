@@ -393,10 +393,11 @@
             </div>
             
             <div class="features-grid">
-                <div class="feature-card">🌿 NDVI Analysis</div>
-                <div class="feature-card">📊 Health Stats</div>
-                <div class="feature-card">🗺️ Interactive Map</div>
-                <div class="feature-card">⚡ Real-time Results</div>
+                <div class="feature-card" id="weather-card" style="cursor:pointer;">🌤️ Weather Info</div>
+                <div class="feature-card" id="ndvi-analysis" style="cursor:pointer;">🌿 NDVI Analysis</div>
+                <div class="feature-card" id="health-stats" style="cursor:pointer;">📊 Health Stats</div>
+                <div class="feature-card" id="interactive-map" style="cursor:pointer;">🗺️ Interactive Map</div>
+                <div class="feature-card" id="realtime-results" style="cursor:pointer;">⚡ Real-time Results</div>
             </div>
         </div>
     </div>
@@ -608,3 +609,182 @@
     </script>
 </body>
 </html>
+<script>
+// Add this to your existing script section
+
+// Make feature cards interactive
+function setupFeatureCards() {
+    const features = [
+        { id: 'ndvi-analysis', name: 'NDVI Analysis', action: showNDVIInfo },
+        { id: 'health-stats', name: 'Health Stats', action: showHealthStats },
+        { id: 'interactive-map', name: 'Interactive Map', action: showMapInfo },
+        { id: 'realtime-results', name: 'Real-time Results', action: showRealtimeInfo }
+    ];
+    
+    features.forEach(feature => {
+        const element = document.getElementById(feature.id);
+        if (element) {
+            element.addEventListener('click', feature.action);
+            element.addEventListener('touchstart', feature.action);
+            element.style.cursor = 'pointer';
+        }
+    });
+}
+
+function showNDVIInfo() {
+    const statusDiv = document.getElementById('status');
+    statusDiv.className = 'status info';
+    statusDiv.innerHTML = `
+        <strong>🌿 What is NDVI?</strong><br>
+        NDVI (Normalized Difference Vegetation Index) measures vegetation health.<br><br>
+        • > 0.6: Excellent 🌟<br>
+        • 0.4-0.6: Good ✅<br>
+        • 0.2-0.4: Moderate ⚠️<br>
+        • < 0.2: Poor 🚨<br><br>
+        Your current NDVI: <strong>${document.querySelector('.ndvi-badge')?.innerText || 'Loading...'}</strong>
+    `;
+    statusDiv.style.display = 'block';
+    setTimeout(() => { statusDiv.style.display = 'none'; }, 8000);
+}
+
+function showHealthStats() {
+    const statusDiv = document.getElementById('status');
+    statusDiv.className = 'status info';
+    statusDiv.innerHTML = `
+        <strong>📊 Health Statistics</strong><br>
+        Fetching latest crop health data...
+    `;
+    statusDiv.style.display = 'block';
+    
+    // Fetch actual stats from backend
+    fetch(`${API_URL}/api/v1/stats/advanced`)
+        .then(r => r.json())
+        .then(data => {
+            if (data.total_analyses) {
+                statusDiv.innerHTML = `
+                    <strong>📊 Health Statistics</strong><br>
+                    • Total Analyses: ${data.total_analyses}<br>
+                    • Average NDVI: ${data.average_ndvi}<br>
+                    • Max NDVI: ${data.max_ndvi}<br>
+                    • Min NDVI: ${data.min_ndvi}<br>
+                    • Excellent Fields: ${data.health_distribution?.excellent || 0}<br>
+                    • Good Fields: ${data.health_distribution?.good || 0}
+                `;
+            } else {
+                statusDiv.innerHTML = `<strong>📊 Health Statistics</strong><br>${data.message || 'No data yet. Upload an image to get started!'}`;
+            }
+        })
+        .catch(err => {
+            statusDiv.innerHTML = `<strong>📊 Health Statistics</strong><br>Unable to fetch stats. Please try again.`;
+        });
+}
+
+function showMapInfo() {
+    const statusDiv = document.getElementById('status');
+    statusDiv.className = 'status info';
+    statusDiv.innerHTML = `
+        <strong>🗺️ Interactive Map Features</strong><br>
+        • Click anywhere on the map to explore<br>
+        • Tap on markers to view NDVI results<br>
+        • Map shows Berlin test area<br>
+        • Results appear as interactive popups<br><br>
+        <small>Tip: Upload an image to see NDVI markers on the map!</small>
+    `;
+    statusDiv.style.display = 'block';
+    setTimeout(() => { statusDiv.style.display = 'none'; }, 8000);
+}
+
+function showRealtimeInfo() {
+    const statusDiv = document.getElementById('status');
+    statusDiv.className = 'status info';
+    statusDiv.innerHTML = `
+        <strong>⚡ Real-time Results</strong><br>
+        Results appear in real-time as they process:<br>
+        • Instant task creation<br>
+        • Live progress tracking<br>
+        • Automatic result updates<br>
+        • No page refresh needed<br><br>
+        <span class="spinner" style="width:16px;height:16px;"></span> Monitoring for new results...
+    `;
+    statusDiv.style.display = 'block';
+    
+    // Start real-time monitoring
+    let lastTaskCount = 0;
+    const monitorInterval = setInterval(async () => {
+        try {
+            const response = await fetch(`${API_URL}/api/v1/tasks`);
+            const tasks = await response.json();
+            if (tasks.length !== lastTaskCount) {
+                lastTaskCount = tasks.length;
+                statusDiv.innerHTML = `
+                    <strong>⚡ Real-time Results</strong><br>
+                    ✅ New analysis detected!<br>
+                    Total tasks: ${tasks.length}<br>
+                    Last result: ${tasks[0]?.ndvi_value || 'Processing...'}
+                `;
+                loadTasks(); // Refresh the task list
+                setTimeout(() => {
+                    if (statusDiv.style.display !== 'none') {
+                        statusDiv.style.display = 'none';
+                    }
+                }, 5000);
+                clearInterval(monitorInterval);
+            }
+        } catch (err) {
+            console.error('Monitor error:', err);
+        }
+    }, 3000);
+    
+    // Stop monitoring after 30 seconds
+    setTimeout(() => {
+        clearInterval(monitorInterval);
+        if (statusDiv.style.display !== 'none') {
+            statusDiv.innerHTML = `<strong>⚡ Real-time Results</strong><br>Monitoring stopped. Upload an image to see real-time updates!`;
+            setTimeout(() => { statusDiv.style.display = 'none'; }, 5000);
+        }
+    }, 30000);
+}
+
+// Also add weather feature
+async function showWeather() {
+    const statusDiv = document.getElementById('status');
+    statusDiv.className = 'status info';
+    statusDiv.innerHTML = `<strong>🌤️ Fetching weather data...</strong><div class="spinner"></div>`;
+    statusDiv.style.display = 'block';
+    
+    try {
+        const response = await fetch(`${API_URL}/api/v1/weather/52.52/13.405`);
+        const weather = await response.json();
+        if (weather.success) {
+            statusDiv.innerHTML = `
+                <strong>🌤️ Current Weather (Berlin)</strong><br>
+                • Temperature: ${weather.current.temperature}°C<br>
+                • Wind Speed: ${weather.current.windspeed} km/h<br>
+                • Time: ${weather.current.time}<br>
+                • Forecast: ${weather.forecast[0]}°C → ${weather.forecast[23]}°C<br><br>
+                <small>Weather affects crop health monitoring. Consider conditions when analyzing NDVI.</small>
+            `;
+        }
+    } catch (err) {
+        statusDiv.innerHTML = `<strong>🌤️ Weather Unavailable</strong><br>Unable to fetch weather data.`;
+    }
+    setTimeout(() => { statusDiv.style.display = 'none'; }, 10000);
+}
+</script>
+<script>
+// Initialize feature cards after page loads
+document.addEventListener('DOMContentLoaded', function() {
+    // Setup feature cards
+    const ndviCard = document.getElementById('ndvi-analysis');
+    const healthCard = document.getElementById('health-stats');
+    const mapCard = document.getElementById('interactive-map');
+    const realtimeCard = document.getElementById('realtime-results');
+    const weatherCard = document.getElementById('weather-card');
+    
+    if (ndviCard) ndviCard.addEventListener('click', showNDVIInfo);
+    if (healthCard) healthCard.addEventListener('click', showHealthStats);
+    if (mapCard) mapCard.addEventListener('click', showMapInfo);
+    if (realtimeCard) realtimeCard.addEventListener('click', showRealtimeInfo);
+    if (weatherCard) weatherCard.addEventListener('click', showWeather);
+});
+</script>
