@@ -2,101 +2,77 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
-    <title>AgriVision Hub - Mobile Crop Health Monitoring</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>AgriVision Hub - Crop Health Monitoring</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            background: #f5f5f5;
-            overflow-x: hidden;
-        }
-
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #1a1a2e; }
+        
         .header {
             background: linear-gradient(135deg, #1a472a 0%, #2d6a4f 100%);
             color: white;
             padding: 16px 20px;
             text-align: center;
-            position: sticky;
-            top: 0;
-            z-index: 100;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
-
-        .header h1 { font-size: 1.5rem; margin-bottom: 4px; }
-        .header p { font-size: 0.8rem; opacity: 0.9; }
-
-        .container {
-            padding: 16px;
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
+        .header h1 { font-size: 1.5rem; }
+        .header p { font-size: 0.8rem; opacity: 0.9; margin-top: 4px; }
+        
+        .main-container {
             max-width: 1400px;
             margin: 0 auto;
+            padding: 16px;
         }
-
-        /* Map Container - Enhanced */
-        .map-panel {
-            background: white;
+        
+        /* Map Container */
+        .map-section {
+            background: #16213e;
             border-radius: 16px;
             overflow: hidden;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            margin-bottom: 16px;
             position: relative;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
         }
-
         #map {
-            height: 400px;
+            height: 450px;
             width: 100%;
-            background: #1a1a2e;
+            background: #0f3460;
         }
-
-        /* Basemap Controls - Stylish Button Bar */
-        .basemap-controls {
+        
+        /* Basemap Controls - Side Buttons */
+        .map-controls {
             position: absolute;
             bottom: 20px;
             right: 20px;
             z-index: 1000;
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 8px;
         }
-
-        .basemap-btn {
+        .map-btn {
             background: white;
             border: none;
-            border-radius: 12px;
-            padding: 12px;
+            border-radius: 10px;
+            padding: 10px;
             cursor: pointer;
             box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-            transition: all 0.3s ease;
-            width: 50px;
-            height: 50px;
+            font-size: 20px;
+            width: 44px;
+            height: 44px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 24px;
+            transition: all 0.2s;
         }
-
-        .basemap-btn:hover {
-            transform: scale(1.05);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-        }
-
-        .basemap-btn.active {
+        .map-btn:hover { transform: scale(1.05); }
+        .map-btn.active {
             background: #2d6a4f;
             color: white;
-            box-shadow: 0 0 0 2px white, 0 0 0 4px #2d6a4f;
+            box-shadow: 0 0 0 2px white;
         }
-
-        /* Horizontal Basemap Selector for Mobile */
-        .basemap-selector {
+        
+        /* Mobile Bottom Selector */
+        .mobile-map-selector {
             position: absolute;
             bottom: 20px;
             left: 20px;
@@ -110,76 +86,47 @@
             gap: 8px;
             overflow-x: auto;
             justify-content: center;
-            flex-wrap: wrap;
         }
-
-        .basemap-option {
+        .mobile-map-btn {
             background: rgba(255,255,255,0.2);
             border: none;
             border-radius: 30px;
-            padding: 10px 18px;
+            padding: 8px 16px;
             color: white;
             cursor: pointer;
-            font-size: 14px;
-            font-weight: 500;
-            transition: all 0.3s;
+            font-size: 13px;
             white-space: nowrap;
         }
-
-        .basemap-option.active {
+        .mobile-map-btn.active {
             background: #2d6a4f;
-            color: white;
         }
-
+        
         @media (max-width: 768px) {
-            .basemap-controls {
-                display: none;
-            }
-            .basemap-selector {
-                display: flex;
-            }
-            #map {
-                height: 350px;
-            }
+            .map-controls { display: none; }
+            .mobile-map-selector { display: flex; flex-wrap: wrap; justify-content: center; }
+            #map { height: 350px; }
         }
-
+        
         /* Upload Panel */
         .upload-panel {
-            background: white;
+            background: #16213e;
             border-radius: 16px;
             padding: 20px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        }
-
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 12px;
             margin-bottom: 16px;
+            color: white;
         }
-
-        .stat-card {
-            background: linear-gradient(135deg, #1a472a15 0%, #2d6a4f15 100%);
-            padding: 16px;
-            border-radius: 12px;
-            text-align: center;
-        }
-
-        .stat-value { font-size: 1.5rem; font-weight: bold; color: #2d6a4f; }
-        .stat-label { font-size: 0.7rem; color: #666; margin-top: 4px; }
-
         .upload-area {
-            border: 2px dashed #ccc;
+            border: 2px dashed #4a6fa5;
             border-radius: 12px;
             padding: 30px 20px;
             text-align: center;
             cursor: pointer;
-            transition: all 0.3s ease;
-            background: #fafafa;
+            background: #0f3460;
+            margin: 16px 0;
         }
-
-        .upload-area:hover { border-color: #2d6a4f; background: #f0f7f0; }
-
+        .upload-area p { margin-bottom: 8px; }
+        .upload-area small { color: #aaa; }
+        
         button {
             background: linear-gradient(135deg, #1a472a 0%, #2d6a4f 100%);
             color: white;
@@ -188,116 +135,91 @@
             border-radius: 12px;
             cursor: pointer;
             width: 100%;
-            font-size: 1rem;
+            font-size: 16px;
             font-weight: 600;
-            margin-top: 16px;
-            transition: transform 0.2s;
         }
-
-        button:active { transform: scale(0.98); }
-        button:disabled { opacity: 0.6; }
-
+        button:disabled { opacity: 0.6; cursor: not-allowed; }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        .stat-card {
+            background: #0f3460;
+            padding: 16px;
+            border-radius: 12px;
+            text-align: center;
+        }
+        .stat-value { font-size: 28px; font-weight: bold; color: #4ade80; }
+        .stat-label { font-size: 12px; color: #aaa; margin-top: 4px; }
+        
         .status {
             margin-top: 16px;
             padding: 12px;
             border-radius: 12px;
             display: none;
-            font-size: 0.875rem;
         }
-
-        .status.success { background: #d4edda; color: #155724; display: block; border-left: 4px solid #28a745; }
-        .status.error { background: #f8d7da; color: #721c24; display: block; border-left: 4px solid #dc3545; }
-        .status.info { background: #d1ecf1; color: #0c5460; display: block; border-left: 4px solid #17a2b8; }
-
+        .status.success { background: #1a472a; color: #4ade80; display: block; }
+        .status.error { background: #7f1a1a; color: #fca5a5; display: block; }
+        .status.info { background: #1e3a5f; color: #93c5fd; display: block; }
+        
         .tasks-panel {
-            background: white;
+            background: #16213e;
             border-radius: 16px;
             padding: 20px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            color: white;
         }
-
-        .task-list { max-height: 400px; overflow-y: auto; }
-
+        .task-list { max-height: 300px; overflow-y: auto; }
         .task-item {
-            background: #f8f9fa;
+            background: #0f3460;
             padding: 12px;
             margin: 8px 0;
             border-radius: 12px;
             cursor: pointer;
-            transition: all 0.2s;
-            border-left: 4px solid #2d6a4f;
+            border-left: 4px solid #4ade80;
         }
-
-        .task-item:hover { background: #e9ecef; transform: translateX(5px); }
-
+        .task-item:hover { background: #1e4a76; }
         .ndvi-badge {
             display: inline-block;
             padding: 4px 8px;
             border-radius: 20px;
-            font-size: 0.7rem;
-            font-weight: bold;
-            margin-top: 4px;
+            font-size: 11px;
+            margin-left: 8px;
         }
-
-        .ndvi-excellent { background: #27ae60; color: white; }
-        .ndvi-good { background: #3498db; color: white; }
-        .ndvi-moderate { background: #f39c12; color: white; }
-        .ndvi-poor { background: #e74c3c; color: white; }
-
-        .features-grid {
+        .excellent { background: #22c55e; }
+        .good { background: #3b82f6; }
+        .moderate { background: #f59e0b; }
+        .poor { background: #ef4444; }
+        
+        .features {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-            gap: 12px;
-            margin-top: 20px;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 10px;
+            margin-top: 16px;
         }
-
-        .feature-card {
-            background: linear-gradient(135deg, #1a472a10 0%, #2d6a4f10 100%);
-            padding: 12px;
-            border-radius: 12px;
+        .feature {
+            background: #0f3460;
+            padding: 10px;
+            border-radius: 10px;
             text-align: center;
-            font-size: 0.75rem;
+            font-size: 12px;
             cursor: pointer;
-            transition: all 0.3s;
         }
-
-        .feature-card:hover {
-            background: linear-gradient(135deg, #1a472a30 0%, #2d6a4f30 100%);
-            transform: translateY(-2px);
-        }
-
+        .feature:hover { background: #1e4a76; }
+        
         @media (min-width: 1024px) {
-            .container {
+            .main-container {
                 display: grid;
-                grid-template-columns: 380px 1fr;
-                grid-template-areas: "upload map" "tasks tasks";
-                gap: 24px;
+                grid-template-columns: 350px 1fr;
+                gap: 16px;
             }
-            .upload-panel { grid-area: upload; }
-            .map-panel { grid-area: map; }
-            .tasks-panel { grid-area: tasks; }
+            .upload-panel { grid-column: 1; margin-bottom: 0; }
+            .map-section { grid-column: 2; margin-bottom: 0; }
+            .tasks-panel { grid-column: span 2; }
             #map { height: 500px; }
         }
-
-        @media (prefers-color-scheme: dark) {
-            body { background: #1a1a2e; }
-            .upload-panel, .tasks-panel, .map-panel { background: #16213e; color: #eee; }
-            .task-item { background: #1a1a2e; color: #eee; }
-            .stat-card { background: linear-gradient(135deg, #1a472a25 0%, #2d6a4f25 100%); }
-            .stat-label { color: #aaa; }
-        }
-
-        .spinner {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid rgba(255,255,255,0.3);
-            border-radius: 50%;
-            border-top-color: white;
-            animation: spin 1s ease-in-out infinite;
-        }
-
-        @keyframes spin { to { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
@@ -306,11 +228,11 @@
         <p>High-Resolution Satellite & Drone Crop Monitoring</p>
     </div>
     
-    <div class="container">
+    <div class="main-container">
+        <!-- Upload Panel -->
         <div class="upload-panel">
             <h3>📤 Upload Field Image</h3>
-            
-            <div class="stats-grid">
+            <div class="stats">
                 <div class="stat-card">
                     <div class="stat-value" id="totalTasks">0</div>
                     <div class="stat-label">Total Scans</div>
@@ -320,449 +242,292 @@
                     <div class="stat-label">Avg NDVI</div>
                 </div>
             </div>
-            
             <div class="upload-area" id="uploadArea">
-                <p>📁 Tap to select image</p>
-                <small>Supports: JPG, PNG</small>
+                <p>📁 Tap or click to select</p>
+                <small>JPG, PNG supported</small>
             </div>
             <input type="file" id="fileInput" accept=".jpg,.jpeg,.png" style="display: none">
             <button id="uploadBtn" disabled>🌾 Analyze Crop Health</button>
             <div id="status" class="status"></div>
         </div>
         
-        <div class="map-panel">
+        <!-- Map Section with Controls -->
+        <div class="map-section">
             <div id="map"></div>
-            <!-- Vertical Basemap Controls for Desktop -->
-            <div class="basemap-controls">
-                <button class="basemap-btn" data-map="streets" title="Street Map">🗺️</button>
-                <button class="basemap-btn" data-map="satellite" title="Satellite">🛰️</button>
-                <button class="basemap-btn" data-map="dark" title="Dark Mode">🌙</button>
-                <button class="basemap-btn" data-map="outdoor" title="Outdoor">🏔️</button>
-                <button class="basemap-btn" data-map="topo" title="Topographic">🗺️</button>
+            
+            <!-- Desktop side buttons -->
+            <div class="map-controls">
+                <button class="map-btn" data-map="satellite" title="Satellite">🛰️</button>
+                <button class="map-btn" data-map="streets" title="Streets">🗺️</button>
+                <button class="map-btn" data-map="dark" title="Dark">🌙</button>
+                <button class="map-btn" data-map="outdoor" title="Outdoor">🏔️</button>
             </div>
-            <!-- Horizontal Basemap Selector for Mobile -->
-            <div class="basemap-selector" id="basemapSelector"></div>
+            
+            <!-- Mobile bottom selector -->
+            <div class="mobile-map-selector" id="mobileSelector"></div>
         </div>
         
+        <!-- Tasks Panel -->
         <div class="tasks-panel">
             <h3>📋 Recent Analyses</h3>
             <div id="taskList" class="task-list">
-                <p style="text-align: center; color: #999;">No analyses yet</p>
+                <p style="text-align:center;color:#aaa;">No analyses yet</p>
             </div>
-            
-            <div class="features-grid">
-                <div class="feature-card" id="ndvi-analysis">🌿 NDVI Analysis</div>
-                <div class="feature-card" id="health-stats">📊 Health Stats</div>
-                <div class="feature-card" id="interactive-map">🗺️ Map Info</div>
-                <div class="feature-card" id="realtime-results">⚡ Real-time</div>
-                <div class="feature-card" id="weather-card">🌤️ Weather</div>
+            <div class="features">
+                <div class="feature" id="ndviInfo">🌿 NDVI Info</div>
+                <div class="feature" id="healthStats">📊 Health Stats</div>
+                <div class="feature" id="mapGuide">🗺️ Map Guide</div>
+                <div class="feature" id="weatherInfo">🌤️ Weather</div>
             </div>
         </div>
     </div>
 
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
         const API_URL = 'https://agrivision-backend-fhc7.onrender.com';
         let map;
-        let selectedFile = null;
-        let currentLayer = null;
-        let currentBasemap = 'streets';
+        let currentTileLayer = null;
         
-        // High-quality basemap configurations
+        // Basemap configurations
         const basemaps = {
-            streets: {
-                name: 'Street Map',
-                url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
-                maxZoom: 19,
-                subdomains: 'abcd'
-            },
             satellite: {
                 name: 'Satellite',
                 url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-                attribution: '&copy; <a href="https://www.esri.com">Esri</a> | Maxar, Earthstar Geographics',
-                maxZoom: 18
+                attribution: 'Esri, Maxar, Earthstar'
             },
-            satellite_hybrid: {
-                name: 'Hybrid',
-                url: 'https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
-                attribution: '&copy; Google | TerraMetrics',
-                maxZoom: 20
+            streets: {
+                name: 'Streets',
+                url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+                attribution: 'OpenStreetMap, CARTO'
             },
             dark: {
-                name: 'Dark Mode',
+                name: 'Dark',
                 url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
-                maxZoom: 19,
-                subdomains: 'abcd'
+                attribution: 'OpenStreetMap, CARTO'
             },
             outdoor: {
                 name: 'Outdoor',
                 url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
-                attribution: '&copy; <a href="https://opentopomap.org">OpenTopoMap</a>',
-                maxZoom: 17
-            },
-            topo: {
-                name: 'Topographic',
-                url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
-                attribution: '&copy; <a href="https://opentopomap.org">OpenTopoMap</a>',
-                maxZoom: 17
-            },
-            esri_natgeo: {
-                name: 'National Geographic',
-                url: 'https://server.arcgisonline.com/ArcGIS/rest/services/NatGeo_World_Map/MapServer/tile/{z}/{y}/{x}',
-                attribution: '&copy; Esri | National Geographic',
-                maxZoom: 16
-            },
-            ocean: {
-                name: 'Ocean Basemap',
-                url: 'https://server.arcgisonline.com/ArcGIS/rest/services/Ocean_Basemap/MapServer/tile/{z}/{y}/{x}',
-                attribution: '&copy; Esri | GEBCO | NOAA',
-                maxZoom: 13
+                attribution: 'OpenTopoMap'
             }
         };
         
         function initMap() {
             map = L.map('map').setView([52.5200, 13.4050], 13);
-            setBasemap('satellite'); // Start with beautiful satellite view
+            setBasemap('satellite');
         }
         
-        function setBasemap(basemapType) {
-            if (map._layers) {
-                // Remove existing tile layers
-                map.eachLayer((layer) => {
-                    if (layer instanceof L.TileLayer) {
-                        map.removeLayer(layer);
-                    }
-                });
+        function setBasemap(type) {
+            if (currentTileLayer) {
+                map.removeLayer(currentTileLayer);
             }
-            
-            const config = basemaps[basemapType];
+            const config = basemaps[type];
             if (config) {
-                const tileLayer = L.tileLayer(config.url, {
+                currentTileLayer = L.tileLayer(config.url, {
                     attribution: config.attribution,
-                    maxZoom: config.maxZoom,
-                    subdomains: config.subdomains || 'abc'
+                    maxZoom: 18
                 }).addTo(map);
-                
-                currentBasemap = basemapType;
-                
-                // Update active button states
-                document.querySelectorAll('.basemap-btn').forEach(btn => {
-                    if (btn.dataset.map === basemapType) {
-                        btn.classList.add('active');
-                    } else {
-                        btn.classList.remove('active');
-                    }
-                });
-                
-                // Update mobile selector
-                document.querySelectorAll('.basemap-option').forEach(opt => {
-                    if (opt.dataset.map === basemapType) {
-                        opt.classList.add('active');
-                    } else {
-                        opt.classList.remove('active');
-                    }
-                });
             }
+            
+            // Update active states
+            document.querySelectorAll('.map-btn').forEach(btn => {
+                if (btn.dataset.map === type) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+            document.querySelectorAll('.mobile-map-btn').forEach(btn => {
+                if (btn.dataset.map === type) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
         }
         
-        function createMobileBasemapSelector() {
-            const selector = document.getElementById('basemapSelector');
-            const basemapList = [
-                { id: 'satellite', icon: '🛰️', name: 'Satellite' },
-                { id: 'satellite_hybrid', icon: '🗺️', name: 'Hybrid' },
-                { id: 'streets', icon: '🏙️', name: 'Streets' },
-                { id: 'dark', icon: '🌙', name: 'Dark' },
-                { id: 'outdoor', icon: '🏔️', name: 'Outdoor' },
-                { id: 'topo', icon: '🗺️', name: 'Topo' },
-                { id: 'esri_natgeo', icon: '🌍', name: 'NatGeo' }
+        function createMobileSelector() {
+            const container = document.getElementById('mobileSelector');
+            const buttons = [
+                { type: 'satellite', icon: '🛰️', label: 'Satellite' },
+                { type: 'streets', icon: '🗺️', label: 'Streets' },
+                { type: 'dark', icon: '🌙', label: 'Dark' },
+                { type: 'outdoor', icon: '🏔️', label: 'Outdoor' }
             ];
+            container.innerHTML = buttons.map(b => 
+                `<button class="mobile-map-btn ${b.type === 'satellite' ? 'active' : ''}" data-map="${b.type}">${b.icon} ${b.label}</button>`
+            ).join('');
             
-            selector.innerHTML = basemapList.map(b => `
-                <button class="basemap-option ${b.id === 'satellite' ? 'active' : ''}" data-map="${b.id}">
-                    ${b.icon} ${b.name}
-                </button>
-            `).join('');
-            
-            document.querySelectorAll('.basemap-option').forEach(btn => {
+            document.querySelectorAll('.mobile-map-btn').forEach(btn => {
                 btn.addEventListener('click', () => setBasemap(btn.dataset.map));
                 btn.addEventListener('touchstart', () => setBasemap(btn.dataset.map));
             });
         }
         
+        // Setup desktop buttons
+        document.querySelectorAll('.map-btn').forEach(btn => {
+            btn.addEventListener('click', () => setBasemap(btn.dataset.map));
+        });
+        
+        let selectedFile = null;
+        
         async function loadTasks() {
             try {
-                const response = await fetch(`${API_URL}/api/v1/tasks`);
-                const tasks = await response.json();
-                
+                const res = await fetch(`${API_URL}/api/v1/tasks`);
+                const tasks = await res.json();
                 document.getElementById('totalTasks').innerText = tasks.length;
-                const completedTasks = tasks.filter(t => t.status === 'completed' && t.ndvi_value);
-                if (completedTasks.length > 0) {
-                    const avgNdv = completedTasks.reduce((sum, t) => sum + (t.ndvi_value || 0), 0) / completedTasks.length;
-                    document.getElementById('avgNdv').innerText = avgNdv.toFixed(3);
+                
+                const completed = tasks.filter(t => t.status === 'completed' && t.ndvi_value);
+                if (completed.length > 0) {
+                    const avg = completed.reduce((s, t) => s + t.ndvi_value, 0) / completed.length;
+                    document.getElementById('avgNdv').innerText = avg.toFixed(3);
                 }
                 
-                const taskList = document.getElementById('taskList');
-                if (!tasks || tasks.length === 0) {
-                    taskList.innerHTML = '<p style="text-align: center; color: #999;">No analyses yet. Upload an image to start!</p>';
+                const container = document.getElementById('taskList');
+                if (tasks.length === 0) {
+                    container.innerHTML = '<p style="text-align:center;color:#aaa;">No analyses yet</p>';
                     return;
                 }
                 
-                taskList.innerHTML = tasks.slice().reverse().map(task => {
-                    let ndviClass = 'ndvi-moderate';
-                    if (task.ndvi_value > 0.6) ndviClass = 'ndvi-excellent';
-                    else if (task.ndvi_value > 0.4) ndviClass = 'ndvi-good';
-                    else if (task.ndvi_value < 0.2) ndviClass = 'ndvi-poor';
+                container.innerHTML = tasks.slice().reverse().map(task => {
+                    let badgeClass = 'moderate';
+                    if (task.ndvi_value > 0.6) badgeClass = 'excellent';
+                    else if (task.ndvi_value > 0.4) badgeClass = 'good';
+                    else if (task.ndvi_value < 0.2) badgeClass = 'poor';
                     
                     return `
-                        <div class="task-item" onclick="viewTask('${task.task_id}')">
+                        <div class="task-item" onclick="showTask('${task.task_id}')">
                             <strong>${task.field_name || task.filename}</strong>
-                            <span class="ndvi-badge ${ndviClass}">NDVI: ${task.ndvi_value ? task.ndvi_value.toFixed(3) : 'Processing...'}</span>
+                            <span class="ndvi-badge ${badgeClass}">NDVI: ${task.ndvi_value ? task.ndvi_value.toFixed(3) : '...'}</span>
                             <br><small>${task.status} • ${new Date(task.created_at).toLocaleString()}</small>
                         </div>
                     `;
                 }).join('');
-            } catch (error) {
-                console.error('Error loading tasks:', error);
-            }
+            } catch(e) { console.error(e); }
         }
         
-        async function viewTask(taskId) {
+        window.showTask = async function(taskId) {
             try {
-                const response = await fetch(`${API_URL}/api/v1/task/${taskId}`);
-                const task = await response.json();
+                const res = await fetch(`${API_URL}/api/v1/task/${taskId}`);
+                const task = await res.json();
+                let color = '#f59e0b';
+                if (task.ndvi_value > 0.6) color = '#22c55e';
+                else if (task.ndvi_value > 0.4) color = '#3b82f6';
+                else if (task.ndvi_value < 0.2) color = '#ef4444';
                 
-                if (currentLayer) map.removeLayer(currentLayer);
-                
-                // Determine color based on NDVI
-                let color = '#f39c12';
-                if (task.ndvi_value > 0.6) color = '#27ae60';
-                else if (task.ndvi_value > 0.4) color = '#3498db';
-                else if (task.ndvi_value < 0.2) color = '#e74c3c';
-                
-                const circle = L.circle([52.5200, 13.4050], {
-                    radius: 500,
-                    color: color,
-                    fillColor: color,
-                    fillOpacity: 0.3,
-                    weight: 3
-                }).addTo(map);
-                
-                circle.bindPopup(`
-                    <div style="min-width: 200px;">
-                        <h4>🌾 ${task.field_name || task.filename}</h4>
-                        <p><strong>NDVI:</strong> ${task.ndvi_value || 'Processing...'}</p>
-                        <p><strong>Status:</strong> ${task.status}</p>
-                        <p><strong>Analyzed:</strong> ${new Date(task.created_at).toLocaleString()}</p>
-                    </div>
+                const marker = L.marker([52.5200, 13.4050]).addTo(map);
+                marker.bindPopup(`
+                    <b>${task.field_name || task.filename}</b><br>
+                    NDVI: ${task.ndvi_value || 'N/A'}<br>
+                    Status: ${task.status}
                 `).openPopup();
                 
-                currentLayer = circle;
                 map.setView([52.5200, 13.4050], 14);
-            } catch (error) {
-                console.error('Error:', error);
-            }
-        }
+                setTimeout(() => map.removeLayer(marker), 5000);
+            } catch(e) { console.error(e); }
+        };
         
         async function uploadFile() {
             if (!selectedFile) return;
-            
             const formData = new FormData();
             formData.append('file', selectedFile);
-            formData.append('field_name', prompt('Field name:', selectedFile.name.split('.')[0]) || 'Unknown Field');
+            formData.append('field_name', prompt('Field name:', selectedFile.name) || 'Unknown');
             
-            const uploadBtn = document.getElementById('uploadBtn');
+            const btn = document.getElementById('uploadBtn');
             const statusDiv = document.getElementById('status');
-            
-            uploadBtn.disabled = true;
-            uploadBtn.innerHTML = '<div class="spinner"></div> Analyzing...';
+            btn.disabled = true;
+            btn.textContent = 'Processing...';
             statusDiv.className = 'status info';
-            statusDiv.innerHTML = '📤 Uploading and analyzing crop health...';
-            statusDiv.style.display = 'block';
+            statusDiv.innerHTML = '📤 Uploading...';
             
             try {
-                const response = await fetch(`${API_URL}/api/v1/upload`, {
-                    method: 'POST',
-                    body: formData
-                });
-                
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                
-                const data = await response.json();
+                const res = await fetch(`${API_URL}/api/v1/upload`, { method: 'POST', body: formData });
+                const data = await res.json();
                 statusDiv.className = 'status success';
-                statusDiv.innerHTML = `✅ Upload successful! Task ID: ${data.task_id.substring(0, 8)}`;
-                
+                statusDiv.innerHTML = `✅ Uploaded! Task: ${data.task_id.substring(0, 8)}`;
                 selectedFile = null;
-                document.getElementById('uploadArea').innerHTML = '<p>📁 Tap to select image</p><small>Supports: JPG, PNG</small>';
+                document.getElementById('uploadArea').innerHTML = '<p>📁 Tap or click to select</p><small>JPG, PNG supported</small>';
                 loadTasks();
-                pollTaskStatus(data.task_id);
-                
-            } catch (error) {
+            } catch(e) {
                 statusDiv.className = 'status error';
-                statusDiv.innerHTML = `❌ Upload failed: ${error.message}`;
+                statusDiv.innerHTML = '❌ Upload failed';
             } finally {
-                uploadBtn.disabled = false;
-                uploadBtn.innerHTML = '🌾 Analyze Crop Health';
+                btn.disabled = false;
+                btn.textContent = '🌾 Analyze Crop Health';
+                setTimeout(() => statusDiv.style.display = 'none', 5000);
             }
         }
         
-        async function pollTaskStatus(taskId) {
-            const interval = setInterval(async () => {
-                try {
-                    const response = await fetch(`${API_URL}/api/v1/task/${taskId}`);
-                    const task = await response.json();
-                    
-                    if (task.status === 'completed') {
-                        clearInterval(interval);
-                        const statusDiv = document.getElementById('status');
-                        statusDiv.className = 'status success';
-                        statusDiv.innerHTML = `✅ Analysis complete! NDVI: ${task.ndvi_value}`;
-                        loadTasks();
-                        viewTask(taskId);
-                        setTimeout(() => { statusDiv.style.display = 'none'; }, 5000);
-                    } else if (task.status === 'failed') {
-                        clearInterval(interval);
-                        const statusDiv = document.getElementById('status');
-                        statusDiv.className = 'status error';
-                        statusDiv.innerHTML = `❌ Analysis failed`;
-                    }
-                } catch (error) {
-                    console.error('Polling error:', error);
-                }
-            }, 2000);
-        }
-        
-        // Feature Card Functions
-        function showNDVIInfo() {
-            const statusDiv = document.getElementById('status');
-            statusDiv.className = 'status info';
-            statusDiv.innerHTML = `
-                <strong>🌿 What is NDVI?</strong><br>
-                NDVI (Normalized Difference Vegetation Index) measures vegetation health.<br><br>
-                • > 0.6: Excellent 🌟<br>
-                • 0.4-0.6: Good ✅<br>
-                • 0.2-0.4: Moderate ⚠️<br>
-                • < 0.2: Poor 🚨
-            `;
-            statusDiv.style.display = 'block';
-            setTimeout(() => { statusDiv.style.display = 'none'; }, 8000);
-        }
-        
-        function showHealthStats() {
-            const statusDiv = document.getElementById('status');
-            statusDiv.className = 'status info';
-            statusDiv.innerHTML = `<strong>📊 Health Statistics</strong><br>Fetching data...`;
-            statusDiv.style.display = 'block';
-            
-            fetch(`${API_URL}/api/v1/stats/advanced`)
-                .then(r => r.json())
-                .then(data => {
-                    if (data.total_analyses) {
-                        statusDiv.innerHTML = `
-                            <strong>📊 Health Statistics</strong><br>
-                            • Total Analyses: ${data.total_analyses}<br>
-                            • Average NDVI: ${data.average_ndvi}<br>
-                            • Excellent Fields: ${data.health_distribution?.excellent || 0}<br>
-                            • Good Fields: ${data.health_distribution?.good || 0}
-                        `;
-                    }
-                })
-                .catch(() => {
-                    statusDiv.innerHTML = `<strong>📊 Health Statistics</strong><br>Upload an image to see stats!`;
-                });
-        }
-        
-        function showMapInfo() {
-            const statusDiv = document.getElementById('status');
-            statusDiv.className = 'status info';
-            statusDiv.innerHTML = `
-                <strong>🗺️ Map Features</strong><br>
-                • 🛰️ Satellite view - High-res imagery<br>
-                • 🗺️ Street view - OSM maps<br>
-                • 🌙 Dark mode - Night viewing<br>
-                • 🏔️ Topographic - Elevation data<br>
-                Click the map buttons to switch!
-            `;
-            statusDiv.style.display = 'block';
-            setTimeout(() => { statusDiv.style.display = 'none'; }, 8000);
-        }
-        
-        function showRealtimeInfo() {
-            const statusDiv = document.getElementById('status');
-            statusDiv.className = 'status info';
-            statusDiv.innerHTML = `<strong>⚡ Real-time Results</strong><br>Monitoring for new analyses...`;
-            statusDiv.style.display = 'block';
-            setTimeout(() => { statusDiv.style.display = 'none'; }, 5000);
-        }
-        
-        async function showWeather() {
-            const statusDiv = document.getElementById('status');
-            statusDiv.className = 'status info';
-            statusDiv.innerHTML = `<strong>🌤️ Fetching weather...</strong><div class="spinner"></div>`;
-            statusDiv.style.display = 'block';
-            
+        // Feature handlers
+        document.getElementById('ndviInfo')?.addEventListener('click', () => {
+            const s = document.getElementById('status');
+            s.className = 'status info';
+            s.innerHTML = '🌿 NDVI > 0.6 Excellent, 0.4-0.6 Good, 0.2-0.4 Moderate, <0.2 Poor';
+            s.style.display = 'block';
+            setTimeout(() => s.style.display = 'none', 5000);
+        });
+        document.getElementById('healthStats')?.addEventListener('click', async () => {
+            const s = document.getElementById('status');
+            s.className = 'status info';
+            s.innerHTML = '📊 Fetching stats...';
+            s.style.display = 'block';
             try {
-                const response = await fetch(`${API_URL}/api/v1/weather/52.52/13.405`);
-                const weather = await response.json();
-                if (weather.success) {
-                    statusDiv.innerHTML = `
-                        <strong>🌤️ Current Weather (Berlin)</strong><br>
-                        • Temperature: ${weather.current.temperature}°C<br>
-                        • Wind Speed: ${weather.current.windspeed} km/h<br>
-                        • Forecast: ${weather.forecast[0]}°C → ${weather.forecast[23]}°C
-                    `;
-                }
-            } catch (err) {
-                statusDiv.innerHTML = `<strong>🌤️ Weather</strong><br>Unable to fetch weather data.`;
-            }
-        }
+                const res = await fetch(`${API_URL}/api/v1/stats/advanced`);
+                const data = await res.json();
+                s.innerHTML = `📊 Total: ${data.total_analyses || 0}, Avg NDVI: ${data.average_ndvi || 'N/A'}`;
+            } catch(e) { s.innerHTML = '📊 Upload an image to see stats'; }
+            setTimeout(() => s.style.display = 'none', 5000);
+        });
+        document.getElementById('mapGuide')?.addEventListener('click', () => {
+            const s = document.getElementById('status');
+            s.className = 'status info';
+            s.innerHTML = '🗺️ Click 🛰️ for Satellite, 🗺️ for Streets, 🌙 for Dark, 🏔️ for Outdoor';
+            s.style.display = 'block';
+            setTimeout(() => s.style.display = 'none', 5000);
+        });
+        document.getElementById('weatherInfo')?.addEventListener('click', async () => {
+            const s = document.getElementById('status');
+            s.className = 'status info';
+            s.innerHTML = '🌤️ Fetching weather...';
+            s.style.display = 'block';
+            try {
+                const res = await fetch(`${API_URL}/api/v1/weather/52.52/13.405`);
+                const w = await res.json();
+                if (w.success) s.innerHTML = `🌤️ ${w.current.temperature}°C, Wind ${w.current.windspeed} km/h`;
+            } catch(e) { s.innerHTML = '🌤️ Weather unavailable'; }
+            setTimeout(() => s.style.display = 'none', 5000);
+        });
         
-        // Event handlers
+        // Upload handlers
         const uploadArea = document.getElementById('uploadArea');
         const fileInput = document.getElementById('fileInput');
         const uploadBtn = document.getElementById('uploadBtn');
         
         uploadArea.addEventListener('click', () => fileInput.click());
-        uploadArea.addEventListener('dragover', (e) => { e.preventDefault(); uploadArea.style.borderColor = '#2d6a4f'; });
-        uploadArea.addEventListener('dragleave', () => { uploadArea.style.borderColor = '#ccc'; });
-        uploadArea.addEventListener('drop', (e) => {
+        uploadArea.addEventListener('dragover', e => { e.preventDefault(); uploadArea.style.borderColor = '#4ade80'; });
+        uploadArea.addEventListener('dragleave', () => uploadArea.style.borderColor = '#4a6fa5');
+        uploadArea.addEventListener('drop', e => {
             e.preventDefault();
-            uploadArea.style.borderColor = '#ccc';
-            const files = e.dataTransfer.files;
-            if (files.length > 0) {
-                selectedFile = files[0];
-                uploadArea.innerHTML = `<p>✅ ${selectedFile.name.substring(0, 30)}</p><small>${(selectedFile.size / 1024).toFixed(0)} KB</small>`;
+            uploadArea.style.borderColor = '#4a6fa5';
+            if (e.dataTransfer.files.length) {
+                selectedFile = e.dataTransfer.files[0];
+                uploadArea.innerHTML = `<p>✅ ${selectedFile.name}</p><small>${(selectedFile.size/1024).toFixed(0)} KB</small>`;
                 uploadBtn.disabled = false;
             }
         });
-        
-        fileInput.addEventListener('change', (e) => {
-            if (e.target.files.length > 0) {
+        fileInput.addEventListener('change', e => {
+            if (e.target.files.length) {
                 selectedFile = e.target.files[0];
-                uploadArea.innerHTML = `<p>✅ ${selectedFile.name.substring(0, 30)}</p><small>${(selectedFile.size / 1024).toFixed(0)} KB</small>`;
+                uploadArea.innerHTML = `<p>✅ ${selectedFile.name}</p><small>${(selectedFile.size/1024).toFixed(0)} KB</small>`;
                 uploadBtn.disabled = false;
             }
         });
-        
         uploadBtn.addEventListener('click', uploadFile);
         
-        // Initialize
         initMap();
-        createMobileBasemapSelector();
+        createMobileSelector();
         loadTasks();
         setInterval(loadTasks, 10000);
-        
-        // Setup basemap buttons
-        document.querySelectorAll('.basemap-btn').forEach(btn => {
-            btn.addEventListener('click', () => setBasemap(btn.dataset.map));
-        });
-        
-        // Setup feature cards
-        document.getElementById('ndvi-analysis')?.addEventListener('click', showNDVIInfo);
-        document.getElementById('health-stats')?.addEventListener('click', showHealthStats);
-        document.getElementById('interactive-map')?.addEventListener('click', showMapInfo);
-        document.getElementById('realtime-results')?.addEventListener('click', showRealtimeInfo);
-        document.getElementById('weather-card')?.addEventListener('click', showWeather);
     </script>
 </body>
 </html>
