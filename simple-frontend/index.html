@@ -1,68 +1,412 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>AgriVision Hub</title>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <title>AgriVision Hub - Mobile Crop Health Monitoring</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; }
-        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; text-align: center; }
-        .container { display: flex; gap: 20px; padding: 20px; height: calc(100vh - 120px); }
-        .upload-panel { background: white; border-radius: 10px; padding: 20px; width: 320px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        .map-panel { flex: 1; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        #map { height: 100%; width: 100%; }
-        .upload-area { border: 2px dashed #ccc; border-radius: 10px; padding: 40px 20px; text-align: center; cursor: pointer; margin: 20px 0; transition: all 0.3s; }
-        .upload-area:hover { border-color: #667eea; background: #f9f9f9; }
-        button { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; width: 100%; font-size: 16px; margin-top: 10px; }
-        button:disabled { opacity: 0.5; cursor: not-allowed; }
-        .status { margin-top: 15px; padding: 10px; border-radius: 6px; display: none; }
-        .status.success { background: #d4edda; color: #155724; display: block; }
-        .status.error { background: #f8d7da; color: #721c24; display: block; }
-        .task-list { margin-top: 20px; max-height: 300px; overflow-y: auto; }
-        .task-item { background: #f8f9fa; padding: 10px; margin: 5px 0; border-radius: 6px; font-size: 12px; cursor: pointer; }
-        .task-item:hover { background: #e9ecef; }
-        h3 { margin-bottom: 15px; color: #333; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            overflow-x: hidden;
+        }
+
+        /* Header - Mobile First */
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 16px 20px;
+            text-align: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .header h1 {
+            font-size: 1.5rem;
+            margin-bottom: 4px;
+        }
+
+        .header p {
+            font-size: 0.8rem;
+            opacity: 0.9;
+        }
+
+        /* Main Container - Mobile Layout */
+        .container {
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        /* Upload Panel - Mobile Optimized */
+        .upload-panel {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .upload-panel h3 {
+            font-size: 1.2rem;
+            margin-bottom: 16px;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .upload-area {
+            border: 2px dashed #ccc;
+            border-radius: 12px;
+            padding: 30px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: #fafafa;
+        }
+
+        .upload-area:hover {
+            border-color: #667eea;
+            background: #f0f0ff;
+        }
+
+        .upload-area p {
+            font-size: 1rem;
+            margin-bottom: 8px;
+        }
+
+        .upload-area small {
+            font-size: 0.75rem;
+            color: #666;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 14px 24px;
+            border-radius: 12px;
+            cursor: pointer;
+            width: 100%;
+            font-size: 1rem;
+            font-weight: 600;
+            margin-top: 16px;
+            transition: transform 0.2s, opacity 0.2s;
+        }
+
+        button:active {
+            transform: scale(0.98);
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            transform: none;
+            cursor: not-allowed;
+        }
+
+        /* Status Messages */
+        .status {
+            margin-top: 16px;
+            padding: 12px;
+            border-radius: 12px;
+            display: none;
+            font-size: 0.875rem;
+        }
+
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            display: block;
+            border-left: 4px solid #28a745;
+        }
+
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            display: block;
+            border-left: 4px solid #dc3545;
+        }
+
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            display: block;
+            border-left: 4px solid #17a2b8;
+        }
+
+        /* Map Panel - Responsive Height */
+        .map-panel {
+            background: white;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        #map {
+            height: 300px;
+            width: 100%;
+        }
+
+        /* Tasks Panel - Mobile Friendly */
+        .tasks-panel {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .tasks-panel h3 {
+            font-size: 1.2rem;
+            margin-bottom: 16px;
+            color: #333;
+        }
+
+        .task-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .task-item {
+            background: #f8f9fa;
+            padding: 12px;
+            margin: 8px 0;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-left: 4px solid #667eea;
+        }
+
+        .task-item:hover {
+            background: #e9ecef;
+            transform: translateX(5px);
+        }
+
+        .task-item strong {
+            font-size: 0.9rem;
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        .task-item small {
+            font-size: 0.7rem;
+            color: #666;
+        }
+
+        .ndvi-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            font-weight: bold;
+            margin-top: 4px;
+        }
+
+        .ndvi-excellent { background: #27ae60; color: white; }
+        .ndvi-good { background: #3498db; color: white; }
+        .ndvi-moderate { background: #f39c12; color: white; }
+        .ndvi-poor { background: #e74c3c; color: white; }
+
+        /* Stats Grid - Mobile First */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
+            padding: 16px;
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .stat-label {
+            font-size: 0.7rem;
+            color: #666;
+            margin-top: 4px;
+        }
+
+        /* Feature Cards */
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 12px;
+            margin-top: 20px;
+        }
+
+        .feature-card {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 12px;
+            text-align: center;
+            font-size: 0.75rem;
+        }
+
+        /* Tablet and Desktop Breakpoints */
+        @media (min-width: 768px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .container {
+                padding: 24px;
+                gap: 24px;
+            }
+            
+            #map {
+                height: 450px;
+            }
+            
+            .stats-grid {
+                gap: 20px;
+            }
+            
+            .stat-value {
+                font-size: 2rem;
+            }
+        }
+
+        @media (min-width: 1024px) {
+            .container {
+                display: grid;
+                grid-template-columns: 380px 1fr;
+                grid-template-areas: 
+                    "upload map"
+                    "tasks tasks";
+                gap: 24px;
+            }
+            
+            .upload-panel {
+                grid-area: upload;
+            }
+            
+            .map-panel {
+                grid-area: map;
+            }
+            
+            .tasks-panel {
+                grid-area: tasks;
+            }
+            
+            #map {
+                height: 500px;
+            }
+        }
+
+        /* Loading Spinner */
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Touch-friendly buttons */
+        button, .upload-area, .task-item {
+            touch-action: manipulation;
+        }
+
+        /* Dark mode support */
+        @media (prefers-color-scheme: dark) {
+            body {
+                background: #1a1a2e;
+            }
+            .upload-panel, .tasks-panel, .map-panel {
+                background: #16213e;
+                color: #eee;
+            }
+            .task-item {
+                background: #1a1a2e;
+                color: #eee;
+            }
+            .stat-card {
+                background: linear-gradient(135deg, #667eea25 0%, #764ba225 100%);
+            }
+        }
     </style>
 </head>
 <body>
     <div class="header">
         <h1>🌾 AgriVision Hub</h1>
-        <p>Drone-based Crop Health Monitoring with NDVI</p>
+        <p>Mobile Crop Health Monitoring with NDVI</p>
     </div>
     
     <div class="container">
         <div class="upload-panel">
-            <h3>📤 Upload Drone Image</h3>
-            <div class="upload-area" id="uploadArea">
-                <p>📁 Click or drag & drop</p>
-                <small>Supports: JPG, PNG, TIFF</small>
-            </div>
-            <input type="file" id="fileInput" accept=".jpg,.jpeg,.png,.tif,.tiff" style="display: none">
-            <button id="uploadBtn" disabled>Upload & Process</button>
-            <div id="status" class="status"></div>
+            <h3>📤 Upload Field Image</h3>
             
-            <h3 style="margin-top: 20px;">📋 Recent Tasks</h3>
-            <div id="taskList" class="task-list">
-                <p style="color: #999; text-align: center;">No tasks yet</p>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value" id="totalTasks">0</div>
+                    <div class="stat-label">Total Scans</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="avgNdv">-</div>
+                    <div class="stat-label">Avg NDVI</div>
+                </div>
             </div>
+            
+            <div class="upload-area" id="uploadArea">
+                <p>📁 Tap to select image</p>
+                <small>Supports: JPG, PNG</small>
+            </div>
+            <input type="file" id="fileInput" accept=".jpg,.jpeg,.png" style="display: none">
+            <button id="uploadBtn" disabled>Analyze Crop Health</button>
+            <div id="status" class="status"></div>
         </div>
         
         <div class="map-panel">
             <div id="map"></div>
         </div>
+        
+        <div class="tasks-panel">
+            <h3>📋 Recent Analyses</h3>
+            <div id="taskList" class="task-list">
+                <p style="text-align: center; color: #999;">No analyses yet</p>
+            </div>
+            
+            <div class="features-grid">
+                <div class="feature-card">🌿 NDVI Analysis</div>
+                <div class="feature-card">📊 Health Stats</div>
+                <div class="feature-card">🗺️ Interactive Map</div>
+                <div class="feature-card">⚡ Real-time Results</div>
+            </div>
+        </div>
     </div>
 
     <script>
-        // API Configuration - UPDATE THIS URL IF NEEDED
         const API_URL = 'https://agrivision-backend-fhc7.onrender.com';
-        
         let map;
         let selectedFile = null;
+        let currentLayer = null;
         
-        // Initialize map
         function initMap() {
             map = L.map('map').setView([52.5200, 13.4050], 13);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -70,53 +414,91 @@
             }).addTo(map);
         }
         
-        // Load all tasks
         async function loadTasks() {
             try {
                 const response = await fetch(`${API_URL}/api/v1/tasks`);
                 const tasks = await response.json();
-                const taskList = document.getElementById('taskList');
                 
+                // Update stats
+                document.getElementById('totalTasks').innerText = tasks.length;
+                const completedTasks = tasks.filter(t => t.status === 'completed' && t.ndvi_value);
+                if (completedTasks.length > 0) {
+                    const avgNdv = completedTasks.reduce((sum, t) => sum + (t.ndvi_value || 0), 0) / completedTasks.length;
+                    document.getElementById('avgNdv').innerText = avgNdv.toFixed(3);
+                }
+                
+                const taskList = document.getElementById('taskList');
                 if (!tasks || tasks.length === 0) {
-                    taskList.innerHTML = '<p style="color: #999; text-align: center;">No tasks yet</p>';
+                    taskList.innerHTML = '<p style="text-align: center; color: #999;">No analyses yet. Upload an image to start!</p>';
                     return;
                 }
                 
-                taskList.innerHTML = tasks.map(task => `
-                    <div class="task-item" onclick="viewTask('${task.task_id}')">
-                        <strong>${task.filename || 'Unknown'}</strong><br>
-                        Status: ${task.status}<br>
-                        Progress: ${task.progress || 0}%<br>
-                        <small>${new Date(task.created_at).toLocaleString()}</small>
-                    </div>
-                `).join('');
+                taskList.innerHTML = tasks.slice().reverse().map(task => {
+                    let ndviClass = 'ndvi-moderate';
+                    let ndviText = task.ndvi_value ? task.ndvi_value.toFixed(3) : 'Processing...';
+                    if (task.ndvi_value > 0.6) ndviClass = 'ndvi-excellent';
+                    else if (task.ndvi_value > 0.4) ndviClass = 'ndvi-good';
+                    else if (task.ndvi_value < 0.2) ndviClass = 'ndvi-poor';
+                    
+                    return `
+                        <div class="task-item" onclick="viewTask('${task.task_id}')">
+                            <strong>${task.field_name || task.filename}</strong>
+                            <span class="ndvi-badge ${ndviClass}">NDVI: ${ndviText}</span>
+                            <br><small>${task.status} • ${new Date(task.created_at).toLocaleString()}</small>
+                        </div>
+                    `;
+                }).join('');
             } catch (error) {
                 console.error('Error loading tasks:', error);
             }
         }
         
-        function viewTask(taskId) {
-            alert(`Task ${taskId}\nCheck console for details`);
-            fetch(`${API_URL}/api/v1/task/${taskId}`)
-                .then(r => r.json())
-                .then(data => console.log('Task details:', data));
+        async function viewTask(taskId) {
+            try {
+                const response = await fetch(`${API_URL}/api/v1/task/${taskId}`);
+                const task = await response.json();
+                
+                if (currentLayer) map.removeLayer(currentLayer);
+                
+                // Create a marker with NDVI info
+                const popupContent = `
+                    <div style="min-width: 200px;">
+                        <h4>🌾 ${task.field_name || task.filename}</h4>
+                        <p><strong>NDVI Value:</strong> ${task.ndvi_value || 'Processing...'}</p>
+                        <p><strong>Status:</strong> ${task.status}</p>
+                        <p><strong>Analyzed:</strong> ${new Date(task.created_at).toLocaleString()}</p>
+                        ${task.ndvi_value ? `<p><strong>Health:</strong> ${task.ndvi_value > 0.6 ? 'Excellent 🌟' : task.ndvi_value > 0.4 ? 'Good ✅' : task.ndvi_value > 0.2 ? 'Moderate ⚠️' : 'Poor 🚨'}</p>` : ''}
+                    </div>
+                `;
+                
+                const marker = L.marker([52.5200, 13.4050]).addTo(map);
+                marker.bindPopup(popupContent).openPopup();
+                currentLayer = marker;
+                
+                document.getElementById('status').className = 'status info';
+                document.getElementById('status').innerHTML = `📊 ${task.field_name}: NDVI = ${task.ndvi_value || 'Processing...'}`;
+                setTimeout(() => {
+                    document.getElementById('status').style.display = 'none';
+                }, 5000);
+            } catch (error) {
+                console.error('Error:', error);
+            }
         }
         
-        // Upload file
         async function uploadFile() {
             if (!selectedFile) return;
             
             const formData = new FormData();
             formData.append('file', selectedFile);
-            formData.append('field_name', 'Test Field');
+            formData.append('field_name', prompt('Field name:', selectedFile.name.split('.')[0]) || 'Unknown Field');
             
             const uploadBtn = document.getElementById('uploadBtn');
             const statusDiv = document.getElementById('status');
             
             uploadBtn.disabled = true;
-            uploadBtn.textContent = 'Uploading...';
-            statusDiv.className = 'status';
-            statusDiv.textContent = 'Uploading...';
+            uploadBtn.innerHTML = '<div class="spinner"></div> Processing...';
+            statusDiv.className = 'status info';
+            statusDiv.innerHTML = '📤 Uploading and analyzing crop health...';
             statusDiv.style.display = 'block';
             
             try {
@@ -125,23 +507,17 @@
                     body: formData
                 });
                 
-                if (!response.ok) {
-                    const error = await response.text();
-                    throw new Error(`HTTP ${response.status}: ${error}`);
-                }
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
                 
                 const data = await response.json();
                 statusDiv.className = 'status success';
-                statusDiv.innerHTML = `✅ Upload successful!<br>Task ID: ${data.task_id}<br>Status: ${data.status}`;
+                statusDiv.innerHTML = `✅ Upload successful! Analyzing... Task ID: ${data.task_id.substring(0, 8)}`;
                 
-                // Reset form
                 selectedFile = null;
-                document.getElementById('uploadArea').innerHTML = '<p>📁 Click or drag & drop</p><small>Supports: JPG, PNG, TIFF</small>';
+                document.getElementById('uploadArea').innerHTML = '<p>📁 Tap to select image</p><small>Supports: JPG, PNG</small>';
+                document.getElementById('uploadArea').style.borderColor = '#ccc';
                 
-                // Refresh tasks
                 loadTasks();
-                
-                // Poll for task completion
                 pollTaskStatus(data.task_id);
                 
             } catch (error) {
@@ -149,7 +525,7 @@
                 statusDiv.innerHTML = `❌ Upload failed: ${error.message}`;
             } finally {
                 uploadBtn.disabled = false;
-                uploadBtn.textContent = 'Upload & Process';
+                uploadBtn.innerHTML = 'Analyze Crop Health';
             }
         }
         
@@ -162,12 +538,18 @@
                     if (task.status === 'completed') {
                         clearInterval(interval);
                         const statusDiv = document.getElementById('status');
-                        statusDiv.innerHTML += `<br>✅ Processing complete! NDVI: ${task.ndvi_value || 'N/A'}`;
+                        statusDiv.className = 'status success';
+                        statusDiv.innerHTML = `✅ Analysis complete! NDVI: ${task.ndvi_value}`;
                         loadTasks();
+                        viewTask(taskId);
+                        setTimeout(() => {
+                            statusDiv.style.display = 'none';
+                        }, 5000);
                     } else if (task.status === 'failed') {
                         clearInterval(interval);
                         const statusDiv = document.getElementById('status');
-                        statusDiv.innerHTML += `<br>❌ Processing failed`;
+                        statusDiv.className = 'status error';
+                        statusDiv.innerHTML = `❌ Analysis failed`;
                     }
                 } catch (error) {
                     console.error('Polling error:', error);
@@ -175,12 +557,16 @@
             }, 2000);
         }
         
-        // Event handlers
+        // Event handlers with touch support
         const uploadArea = document.getElementById('uploadArea');
         const fileInput = document.getElementById('fileInput');
         const uploadBtn = document.getElementById('uploadBtn');
         
         uploadArea.addEventListener('click', () => fileInput.click());
+        uploadArea.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            fileInput.click();
+        });
         
         uploadArea.addEventListener('dragover', (e) => {
             e.preventDefault();
@@ -197,7 +583,7 @@
             const files = e.dataTransfer.files;
             if (files.length > 0) {
                 selectedFile = files[0];
-                uploadArea.innerHTML = `<p>✅ ${selectedFile.name}</p><small>${(selectedFile.size / 1024 / 1024).toFixed(2)} MB</small>`;
+                uploadArea.innerHTML = `<p>✅ ${selectedFile.name.substring(0, 30)}</p><small>${(selectedFile.size / 1024).toFixed(0)} KB</small>`;
                 uploadBtn.disabled = false;
             }
         });
@@ -205,18 +591,19 @@
         fileInput.addEventListener('change', (e) => {
             if (e.target.files.length > 0) {
                 selectedFile = e.target.files[0];
-                uploadArea.innerHTML = `<p>✅ ${selectedFile.name}</p><small>${(selectedFile.size / 1024 / 1024).toFixed(2)} MB</small>`;
+                uploadArea.innerHTML = `<p>✅ ${selectedFile.name.substring(0, 30)}</p><small>${(selectedFile.size / 1024).toFixed(0)} KB</small>`;
                 uploadBtn.disabled = false;
             }
         });
         
         uploadBtn.addEventListener('click', uploadFile);
+        uploadBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (!uploadBtn.disabled) uploadFile();
+        });
         
-        // Initialize
         initMap();
         loadTasks();
-        
-        // Refresh tasks every 10 seconds
         setInterval(loadTasks, 10000);
     </script>
 </body>
